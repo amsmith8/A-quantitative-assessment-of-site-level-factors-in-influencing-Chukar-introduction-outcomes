@@ -7,8 +7,8 @@
 
 #rm(list=ls(all=TRUE))
 
-source( "R_script/Global-covariate-prep.R" )
-Model_CRS <- crs( super_stack )
+source( "R_script/Global_covariate_prep.R" )
+source( "R_script/eBird_data_cleaning.R" )
 
 library("dismo")
 library( "maptools" )
@@ -17,7 +17,7 @@ library( "rgeos" )
 library( "sp" )
 library( "tictoc" )
 
-
+Model_CRS <- crs( super_stack )
 
 # remove unnecessary objects 
 rm(bioclim_list,bioclim_stack,topo_list,topo_stack)
@@ -25,21 +25,19 @@ rm(bioclim_list,bioclim_stack,topo_list,topo_stack)
 
 # DATA PREPROCESS
 
-# Chukar range polygon file 
-Ac_poly <- readShapePoly( "/Users/austinsmith/Documents/SDM_spatial_data/Bird_life_galliformes_fgip/Alectoris_chukar/Alectoris_chukar.shp" ) # via Bird Life
-crs( Ac_poly ) <- Model_CRS
-
-### Seperate the polygon into native and naturalized regions
-native <- subset( Ac_poly , Ac_poly$OBJECTID == 36 )  # historical  native range for A. chukar. Similar to Christensen 1970
-naturalized <- subset( Ac_poly, Ac_poly$OBJECTID != 36 ) # recognized regions of naturalized populations
-
-
-states <- rgdal::readOGR("/Users/austinsmith/Downloads/ne_110m_admin_1_states_provinces/ne_110m_admin_1_states_provinces.shp") 
-crs(states) <-  Model_CRS
-
-
-CA <- states[states$name == "California",]
-CA_chukar_area <- intersect(CA, Ac_poly)
+# # Chukar range polygon file 
+# Ac_poly <- readShapePoly( "/Users/austinsmith/Documents/SDM_spatial_data/Bird_life_galliformes_fgip/Alectoris_chukar/Alectoris_chukar.shp" ) # via Bird Life
+# crs( Ac_poly ) <- Model_CRS
+# 
+# ### Seperate the polygon into native and naturalized regions
+# native <- subset( Ac_poly , Ac_poly$OBJECTID == 36 )  # historical  native range for A. chukar. Similar to Christensen 1970
+# naturalized <- subset( Ac_poly, Ac_poly$OBJECTID != 36 ) # recognized regions of naturalized populations
+#
+# states <- rgdal::readOGR("/Users/austinsmith/Downloads/ne_110m_admin_1_states_provinces/ne_110m_admin_1_states_provinces.shp") 
+# crs(states) <-  Model_CRS
+#
+# CA <- states[states$name == "California",]
+# CA_chukar_area <- intersect(CA, Ac_poly)
 
 
 library( "rnaturalearth" )
@@ -55,10 +53,10 @@ crs( world_land ) <- Model_CRS
 
 
 # Present points
-chukar_present <- spsample( CA_chukar_area, 100 , type = 'random' )
-#chukar_present <- spsample( naturalized, 1000 , type = 'random' )
-chukar_present_coords <- data.frame( chukar_present@coords ) # data frame of lon lat coords 
-names(chukar_present_coords) <- c( "lon", "lat" )
+#chukar_present <- spsample( CA_chukar_area, 100 , type = 'random' )
+chukar_present_coords <- CA_pts
+# chukar_present_coords <- data.frame( chukar_present@coords ) # data frame of lon lat coords 
+# names(chukar_present_coords) <- c( "lon", "lat" )
 
 k <- 5
 fold_pres <- kfold(chukar_present_coords,k)
@@ -209,8 +207,9 @@ for (i in 1:k) {
 ###################################################
 ### code chunk number 7: save-output
 ###################################################
-saveRDS( auc_scores , "./RDS_objects/auc_scores_CA.rds" )
-saveRDS( sensSpec_scores , "./RDS_objects/sensSpec_scores_CA.rds" )
+dir.create( "RDS_objects/CA")
+saveRDS( auc_scores , "./RDS_objects/CA/auc_scores_CA.rds" )
+saveRDS( sensSpec_scores , "./RDS_objects/CA/sensSpec_scores_CA.rds" )
 
 
 ###-----------------------------------------------------------------------------------------------------------------------
@@ -218,10 +217,10 @@ saveRDS( sensSpec_scores , "./RDS_objects/sensSpec_scores_CA.rds" )
 # Important objects
 
 # The points used for model building
-saveRDS(chukar_present, "./RDS_objects/chukar_present_pts_CA.rds")
-saveRDS(background_sample, "./RDS_objects/background_sample_CA.rds"  )
-saveRDS(sdm_data, "./RDS_objects/chukar_sdm_data_CA.rds"  )
-saveRDS(fold_pres, "./RDS_objects/fold_pres_CA.rds")
+saveRDS(chukar_present, "./RDS_objects/CA/chukar_present_pts_CA.rds")
+saveRDS(background_sample, "./RDS_objects/CA/background_sample_CA.rds"  )
+saveRDS(sdm_data, "./RDS_objects/CA/chukar_sdm_data_CA.rds"  )
+saveRDS(fold_pres, "./RDS_objects/CA/fold_pres_CA.rds")
 
 
 

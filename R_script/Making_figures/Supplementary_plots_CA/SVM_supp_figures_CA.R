@@ -1,3 +1,4 @@
+library("dismo")
 library("ggplot2")
 library("ggpubr")
 library("maptools")
@@ -32,16 +33,28 @@ bottom =  24.7433195 # south lat
 states <- rgdal::readOGR("/Users/austinsmith/Downloads/ne_110m_admin_1_states_provinces/ne_110m_admin_1_states_provinces.shp") 
 crs(states) <- crs(model_stack_svm$svmFold1)
 
-Ac_poly <- rgdal::readOGR("/Users/austinsmith/Documents/SDM_spatial_data/Bird_life_galliformes_fgip/Alectoris_chukar/Alectoris_chukar.shp") # via Bird Life
-crs(Ac_poly) <- crs(model_stack_svm$svmFold1)
-#r <- rasterize(Ac.poly, Final.model, field=1)
+# Ac_poly <- rgdal::readOGR("/Users/austinsmith/Documents/SDM_spatial_data/Bird_life_galliformes_fgip/Alectoris_chukar/Alectoris_chukar.shp") # via Bird Life
+# crs(Ac_poly) <- crs(model_stack_gbm$gbmFold1)
+# #r <- rasterize(Ac.poly, Final.model, field=1)
+# 
+# 
+# ### Seperate the polygon into native and naturalized regions
+# native <- subset(Ac_poly, Ac_poly$OBJECTID == 36 )  # historical  native range for A. chukar. Similar to Christensen 1970
+# naturalized <- subset(Ac_poly, Ac_poly$OBJECTID != 36 )
+# 
+# fort_native <- fortify(native)
+# fort_nat <- fortify(naturalized)
 
 
-### Seperate the polygon into native and naturalized regions
-native <- subset(Ac_poly, Ac_poly$OBJECTID == 36 )  # historical  native range for A. chukar. Similar to Christensen 1970
-naturalized <- subset(Ac_poly, Ac_poly$OBJECTID != 36 )
 
-fort_native <- fortify(native)
+source( "R_script/eBird_data_cleaning.R" )
+
+
+naturalized <- circles(us_pts, d = d , dissolve=TRUE, lonlat=TRUE) #60km is the average distance recorded 
+naturalized  <- polygons(naturalized )
+
+
+#fort_native <- fortify(native)
 fort_nat <- fortify(naturalized)
 
 
@@ -106,7 +119,7 @@ SVM_fold1_raw <-
   ggplot(data = svm_fold1_raw_df , aes(y=lat, x=long)) + 
   geom_raster( aes(group=Score, fill = Score) ) +
   coord_cartesian( xlim = c( left , right ), ylim =c( bottom , top ) ) +
-  ggtitle("SVM fold 1 - California points (raw values)") +
+  ggtitle("SVM fold 1 - native points (raw values)") +
   theme( panel.background = element_rect( fill = "lightblue",
                                           colour = "lightblue",
                                           size = 0.5, linetype = "solid")) +
@@ -121,7 +134,7 @@ SVM_fold2_raw <-
   ggplot(data = svm_fold2_raw_df , aes(y=lat, x=long)) + 
   geom_raster( aes(group=Score, fill = Score) ) +
   coord_cartesian( xlim = c( left , right ), ylim =c( bottom , top ) ) +
-  ggtitle("SVM fold 2 - California points (raw values)") +
+  ggtitle("SVM fold 2 - native points (raw values)") +
   theme( panel.background = element_rect( fill = "lightblue",
                                           colour = "lightblue",
                                           size = 0.5, linetype = "solid")) +
@@ -136,7 +149,7 @@ SVM_fold3_raw <-
   ggplot(data = svm_fold3_raw_df, aes(y=lat, x=long)) + 
   geom_raster( aes(group=Score, fill = Score) ) +
   coord_cartesian( xlim = c( left , right ), ylim =c( bottom , top ) ) +
-  ggtitle("SVM fold 3 - California points (raw values)") +
+  ggtitle("SVM fold 3 - native points (raw values)") +
   theme( panel.background = element_rect( fill = "lightblue",
                                           colour = "lightblue",
                                           size = 0.5, linetype = "solid")) +
@@ -151,7 +164,7 @@ SVM_fold4_raw <-
   ggplot(data = svm_fold4_raw_df , aes(y=lat, x=long)) + 
   geom_raster( aes(group=Score, fill = Score) ) +
   coord_cartesian( xlim = c( left , right ), ylim =c( bottom , top ) ) +
-  ggtitle("SVM fold 4 - California points (raw values)") +
+  ggtitle("SVM fold 4 - native points (raw values)") +
   theme( panel.background = element_rect( fill = "lightblue",
                                           colour = "lightblue",
                                           size = 0.5, linetype = "solid")) +
@@ -166,7 +179,7 @@ SVM_fold5_raw <-
   ggplot(data = svm_fold5_raw_df, aes(y=lat, x=long)) + 
   geom_raster( aes(group=Score, fill = Score) ) +
   coord_cartesian( xlim = c( left , right ), ylim =c( bottom , top ) ) +
-  ggtitle("SVM fold 5 - California points (raw values)") +
+  ggtitle("SVM fold 5 - native points (raw values)") +
   theme( panel.background = element_rect( fill = "lightblue",
                                           colour = "lightblue",
                                           size = 0.5, linetype = "solid")) +
@@ -177,6 +190,7 @@ SVM_fold5_raw <-
 rm( svm_fold5_raw_df )
 gc()
 
+
 # binary 
 
 
@@ -184,13 +198,13 @@ SVM_fold1_binary <-
   ggplot(data = svm_fold1_binary_df , aes(y=lat, x=long)) + 
   geom_raster( aes(group=Score, fill = Score) ) +
   coord_cartesian( xlim = c( left , right ), ylim =c( bottom , top ) ) +
-  ggtitle("SVM fold 1 - California points (binary values)") +
+  ggtitle("SVM fold 1 - native points (binary values)") +
   theme( panel.background = element_rect( fill = "lightblue",
                                           colour = "lightblue",
                                           size = 0.5, linetype = "solid")) +
   scale_fill_gradientn(name = "Suitability", colours = rev(terrain.colors(2)), na.value = "blue") + 
-  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA) + 
-  geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA) 
+  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA) #+ 
+#geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
 
 # remove df
 rm( svm_fold1_binary_df )
@@ -200,13 +214,13 @@ SVM_fold2_binary <-
   ggplot(data = svm_fold2_binary_df , aes(y=lat, x=long)) + 
   geom_raster( aes(group=Score, fill = Score) ) +
   coord_cartesian( xlim = c( left , right ), ylim =c( bottom , top ) ) +
-  ggtitle("SVM fold 2 - California points (binary values)") +
+  ggtitle("SVM fold 2 - native points (binary values)") +
   theme( panel.background = element_rect( fill = "lightblue",
                                           colour = "lightblue",
                                           size = 0.5, linetype = "solid")) +
   scale_fill_gradientn(name = "Suitability", colours = rev(terrain.colors(2)), na.value = "blue") + 
-  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA) + 
-  geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
+  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA) #+ 
+#geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
 
 # remove df
 rm( svm_fold2_binary_df )
@@ -216,13 +230,13 @@ SVM_fold3_binary <-
   ggplot(data = svm_fold3_binary_df, aes(y=lat, x=long)) + 
   geom_raster( aes(group=Score, fill = Score) ) +
   coord_cartesian( xlim = c( left , right ), ylim =c( bottom , top ) ) +
-  ggtitle("SVM fold 3 - California points (binary values)") +
+  ggtitle("SVM fold 3 - native points (binary values)") +
   theme( panel.background = element_rect( fill = "lightblue",
                                           colour = "lightblue",
                                           size = 0.5, linetype = "solid")) +
   scale_fill_gradientn(name = "Suitability", colours = rev(terrain.colors(2)), na.value = "blue") + 
-  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA) + 
-  geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
+  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA) #+ 
+#geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
 
 # remove df
 rm( svm_fold3_binary_df )
@@ -232,13 +246,13 @@ SVM_fold4_binary <-
   ggplot(data = svm_fold4_binary_df , aes(y=lat, x=long)) + 
   geom_raster( aes(group=Score, fill = Score) ) +
   coord_cartesian( xlim = c( left , right ), ylim =c( bottom , top ) ) +
-  ggtitle("SVM fold 4 - California points (binary values)") +
+  ggtitle("SVM fold 4 - native points (binary values)") +
   theme( panel.background = element_rect( fill = "lightblue",
                                           colour = "lightblue",
                                           size = 0.5, linetype = "solid")) +
   scale_fill_gradientn(name = "Suitability", colours = rev(terrain.colors(2)), na.value = "blue") + 
-  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA) + 
-  geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
+  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA) #+ 
+#geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
 
 # remove df
 rm( svm_fold4_binary_df )
@@ -248,13 +262,13 @@ SVM_fold5_binary <-
   ggplot(data = svm_fold5_binary_df, aes(y=lat, x=long)) + 
   geom_raster( aes(group=Score, fill = Score) ) +
   coord_cartesian( xlim = c( left , right ), ylim =c( bottom , top ) ) +
-  ggtitle("SVM fold 5 - California points (binary values)") +
+  ggtitle("SVM fold 5 - native points (binary values)") +
   theme( panel.background = element_rect( fill = "lightblue",
                                           colour = "lightblue",
                                           size = 0.5, linetype = "solid")) +
   scale_fill_gradientn(name = "Suitability", colours = rev(terrain.colors(2)), na.value = "blue") + 
-  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA) + 
-  geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
+  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA) #+ 
+#geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
 
 # remove df
 rm( svm_fold5_binary_df )
@@ -316,13 +330,13 @@ SVM_mean_raw <-
   ggplot(data = svm_mean_raw_df , aes(y=lat, x=long)) + 
   geom_raster( aes(group=Score, fill = Score) ) +
   coord_cartesian( xlim = c( left , right ), ylim =c( bottom , top ) ) +
-  ggtitle("SVM mean - California points (binary values)") +
+  ggtitle("SVM mean - native points (binary values)") +
   theme( panel.background = element_rect( fill = "lightblue",
                                           colour = "lightblue",
                                           size = 0.5, linetype = "solid")) +
   scale_fill_gradientn(name = "Suitability", colours = rev(terrain.colors(10)), na.value = "blue") + 
-  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA)+ 
-  geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
+  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA)#+ 
+#geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
 
 rm( svm_mean_raw_df )
 gc()
@@ -331,46 +345,46 @@ SVM_mean_binary <-
   ggplot(data = svm_mean_binary_df , aes(y=lat, x=long)) + 
   geom_raster( aes(group=Score, fill = Score) ) +
   coord_cartesian( xlim = c( left , right ), ylim =c( bottom , top ) ) +
-  ggtitle("SVM mean - California points (binary values)") +
+  ggtitle("SVM mean - native points (binary values)") +
   theme( panel.background = element_rect( fill = "lightblue",
                                           colour = "lightblue",
                                           size = 0.5, linetype = "solid")) +
   scale_fill_gradientn(name = "Suitability", colours = rev(terrain.colors(2)), na.value = "blue") + 
-  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA)+ 
-  geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
+  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA)#+ 
+#geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
 
 # remove df
 rm( svm_mean_binary_df )
 gc()
 
-# Majority California 
+# Majority Native 
 SVM_mv <- 
   ggplot(data = svm_mv_df , aes(y=lat, x=long)) + 
   geom_raster( aes(group=Score, fill = Score) ) +
   coord_cartesian( xlim = c( left , right ), ylim =c( bottom , top ) ) +
-  ggtitle("SVM majority vote - California points") +
+  ggtitle("SVM majority vote - native points") +
   theme( panel.background = element_rect( fill = "lightblue",
                                           colour = "lightblue",
                                           size = 0.5, linetype = "solid")) +
   scale_fill_gradientn(name = "Suitability", colours = rev(terrain.colors(2)), na.value = "blue") + 
-  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA) + 
-  geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
+  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA) #+ 
+#geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
 
 rm( svm_mv_df )
 gc()
 
-# UD California 
+# UD Native 
 SVM_ud <- 
   ggplot(data = svm_ud_df , aes(y=lat, x=long)) + 
   geom_raster( aes(fill = Score ) ) +
   coord_cartesian( xlim = c( left , right ), ylim =c( bottom , top ) ) +
-  ggtitle("SVM unanimous decision - California points") +
+  ggtitle("SVM unanimous decision - native points") +
   theme( panel.background = element_rect( fill = "lightblue",
                                           colour = "lightblue",
                                           size = 0.5, linetype = "solid")) +
   scale_fill_gradientn(name = "Suitability", colours = rev(terrain.colors(2)), na.value = "blue") + 
-  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA) + 
-  geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
+  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA) #+ 
+#geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
 
 rm( svm_ud_df  )
 gc()

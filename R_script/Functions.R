@@ -28,11 +28,11 @@ cm_raster <- function(true, pred){
   TP <- ct$Freq[4]  # True positve (TP)
   
   acc = (TN + TP)/(TN + FN + FP + TP ) # Accuracy
-  tpr = TP/(FP + TP) # True positve rate - Sensitvity*** 
+  tpr = TP/(FP + TP) # True positve rate - Sensitvity***
   tnr = TN/(TN + FN) # True negative rate - Specificity***
   #fpr = FN/(TN + FN) #  False positve rate
   #fnr = FP/(FP + TP) # False negative rate
-  
+
   Stats <- data.frame(round( c(acc, tpr, tnr ), 4) )
   #Stats <- data.frame(round( c(acc, tpr, tnr, fpr, fnr), 3) )
   colnames(Stats) <- names(pred)

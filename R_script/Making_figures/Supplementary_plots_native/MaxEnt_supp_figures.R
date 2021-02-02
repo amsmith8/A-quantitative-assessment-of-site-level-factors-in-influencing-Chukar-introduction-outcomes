@@ -1,3 +1,4 @@
+library("dismo")
 library("ggplot2")
 library("ggpubr")
 library("maptools")
@@ -32,16 +33,24 @@ bottom =  24.7433195 # south lat
 states <- rgdal::readOGR("/Users/austinsmith/Downloads/ne_110m_admin_1_states_provinces/ne_110m_admin_1_states_provinces.shp") 
 crs(states) <- crs(model_stack_maxent$maxentFold1)
 
-Ac_poly <- rgdal::readOGR("/Users/austinsmith/Documents/SDM_spatial_data/Bird_life_galliformes_fgip/Alectoris_chukar/Alectoris_chukar.shp") # via Bird Life
-crs(Ac_poly) <- crs(model_stack_maxent$maxentFold1)
-#r <- rasterize(Ac.poly, Final.model, field=1)
+# Ac_poly <- rgdal::readOGR("/Users/austinsmith/Documents/SDM_spatial_data/Bird_life_galliformes_fgip/Alectoris_chukar/Alectoris_chukar.shp") # via Bird Life
+# crs(Ac_poly) <- crs(model_stack_ann$annFold1)
+# #r <- rasterize(Ac.poly, Final.model, field=1)
+# 
+# 
+# ### Seperate the polygon into native and naturalized regions
+# native <- subset(Ac_poly, Ac_poly$OBJECTID == 36 )  # historical  native range for A. chukar. Similar to Christensen 1970
+# naturalized <- subset(Ac_poly, Ac_poly$OBJECTID != 36 )
 
 
-### Seperate the polygon into native and naturalized regions
-native <- subset(Ac_poly, Ac_poly$OBJECTID == 36 )  # historical  native range for A. chukar. Similar to Christensen 1970
-naturalized <- subset(Ac_poly, Ac_poly$OBJECTID != 36 )
+source( "R_script/eBird_data_cleaning.R" )
 
-fort_native <- fortify(native)
+
+naturalized <- circles(us_pts, d = d , dissolve=TRUE, lonlat=TRUE) #60km is the average distance recorded 
+naturalized  <- polygons(naturalized )
+
+
+#fort_native <- fortify(native)
 fort_nat <- fortify(naturalized)
 
 
@@ -188,8 +197,8 @@ MaxEnt_fold1_binary <-
                                           colour = "lightblue",
                                           size = 0.5, linetype = "solid")) +
   scale_fill_gradientn(name = "Suitability", colours = rev(terrain.colors(2)), na.value = "blue") + 
-  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA) + 
-  geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA) 
+  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA) #+ 
+#geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
 
 # remove df
 rm( maxent_fold1_binary_df )
@@ -204,8 +213,8 @@ MaxEnt_fold2_binary <-
                                           colour = "lightblue",
                                           size = 0.5, linetype = "solid")) +
   scale_fill_gradientn(name = "Suitability", colours = rev(terrain.colors(2)), na.value = "blue") + 
-  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA) + 
-  geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
+  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA) #+ 
+#geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
 
 # remove df
 rm( maxent_fold2_binary_df )
@@ -220,8 +229,8 @@ MaxEnt_fold3_binary <-
                                           colour = "lightblue",
                                           size = 0.5, linetype = "solid")) +
   scale_fill_gradientn(name = "Suitability", colours = rev(terrain.colors(2)), na.value = "blue") + 
-  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA) + 
-  geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
+  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA) #+ 
+#geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
 
 # remove df
 rm( maxent_fold3_binary_df )
@@ -236,8 +245,8 @@ MaxEnt_fold4_binary <-
                                           colour = "lightblue",
                                           size = 0.5, linetype = "solid")) +
   scale_fill_gradientn(name = "Suitability", colours = rev(terrain.colors(2)), na.value = "blue") + 
-  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA) + 
-  geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
+  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA) #+ 
+#geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
 
 # remove df
 rm( maxent_fold4_binary_df )
@@ -252,8 +261,8 @@ MaxEnt_fold5_binary <-
                                           colour = "lightblue",
                                           size = 0.5, linetype = "solid")) +
   scale_fill_gradientn(name = "Suitability", colours = rev(terrain.colors(2)), na.value = "blue") + 
-  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA) + 
-  geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
+  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA) #+ 
+#geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
 
 # remove df
 rm( maxent_fold5_binary_df )
@@ -318,8 +327,8 @@ MaxEnt_mean_raw <-
                                           colour = "lightblue",
                                           size = 0.5, linetype = "solid")) +
   scale_fill_gradientn(name = "Suitability", colours = rev(terrain.colors(10)), na.value = "blue") + 
-  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA)+ 
-  geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
+  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA)#+ 
+#geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
 
 rm( maxent_mean_raw_df )
 gc()
@@ -333,8 +342,8 @@ MaxEnt_mean_binary <-
                                           colour = "lightblue",
                                           size = 0.5, linetype = "solid")) +
   scale_fill_gradientn(name = "Suitability", colours = rev(terrain.colors(2)), na.value = "blue") + 
-  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA)+ 
-  geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
+  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA)#+ 
+#geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
 
 # remove df
 rm( maxent_mean_binary_df )
@@ -350,8 +359,8 @@ MaxEnt_mv <-
                                           colour = "lightblue",
                                           size = 0.5, linetype = "solid")) +
   scale_fill_gradientn(name = "Suitability", colours = rev(terrain.colors(2)), na.value = "blue") + 
-  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA) + 
-  geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
+  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA) #+ 
+#geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
 
 rm( maxent_mv_df )
 gc()
@@ -366,8 +375,8 @@ MaxEnt_ud <-
                                           colour = "lightblue",
                                           size = 0.5, linetype = "solid")) +
   scale_fill_gradientn(name = "Suitability", colours = rev(terrain.colors(2)), na.value = "blue") + 
-  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA) + 
-  geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
+  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA) #+ 
+#geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
 
 rm( maxent_ud_df  )
 gc()

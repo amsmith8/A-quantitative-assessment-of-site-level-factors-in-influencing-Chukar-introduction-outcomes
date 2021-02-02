@@ -1,3 +1,4 @@
+library("dismo")
 library("ggplot2")
 library("ggpubr")
 library("maptools")
@@ -32,16 +33,28 @@ bottom =  24.7433195 # south lat
 states <- rgdal::readOGR("/Users/austinsmith/Downloads/ne_110m_admin_1_states_provinces/ne_110m_admin_1_states_provinces.shp") 
 crs(states) <- crs(model_stack_gbm$gbmFold1)
 
-Ac_poly <- rgdal::readOGR("/Users/austinsmith/Documents/SDM_spatial_data/Bird_life_galliformes_fgip/Alectoris_chukar/Alectoris_chukar.shp") # via Bird Life
-crs(Ac_poly) <- crs(model_stack_gbm$gbmFold1)
-#r <- rasterize(Ac.poly, Final.model, field=1)
+# Ac_poly <- rgdal::readOGR("/Users/austinsmith/Documents/SDM_spatial_data/Bird_life_galliformes_fgip/Alectoris_chukar/Alectoris_chukar.shp") # via Bird Life
+# crs(Ac_poly) <- crs(model_stack_gbm$gbmFold1)
+# #r <- rasterize(Ac.poly, Final.model, field=1)
+# 
+# 
+# ### Seperate the polygon into native and naturalized regions
+# native <- subset(Ac_poly, Ac_poly$OBJECTID == 36 )  # historical  native range for A. chukar. Similar to Christensen 1970
+# naturalized <- subset(Ac_poly, Ac_poly$OBJECTID != 36 )
+# 
+# fort_native <- fortify(native)
+# fort_nat <- fortify(naturalized)
 
 
-### Seperate the polygon into native and naturalized regions
-native <- subset(Ac_poly, Ac_poly$OBJECTID == 36 )  # historical  native range for A. chukar. Similar to Christensen 1970
-naturalized <- subset(Ac_poly, Ac_poly$OBJECTID != 36 )
 
-fort_native <- fortify(native)
+source( "R_script/eBird_data_cleaning.R" )
+
+
+naturalized <- circles(us_pts, d = d , dissolve=TRUE, lonlat=TRUE) #60km is the average distance recorded 
+naturalized  <- polygons(naturalized )
+
+
+#fort_native <- fortify(native)
 fort_nat <- fortify(naturalized)
 
 
@@ -105,7 +118,7 @@ GBM_fold1_raw <-
   ggplot(data = gbm_fold1_raw_df , aes(y=lat, x=long)) + 
   geom_raster( aes(group=Score, fill = Score) ) +
   coord_cartesian( xlim = c( left , right ), ylim =c( bottom , top ) ) +
-  ggtitle("GBM fold 1 - California points (raw values)") +
+  ggtitle("GBM fold 1 - native points (raw values)") +
   theme( panel.background = element_rect( fill = "lightblue",
                                           colour = "lightblue",
                                           size = 0.5, linetype = "solid")) +
@@ -120,7 +133,7 @@ GBM_fold2_raw <-
   ggplot(data = gbm_fold2_raw_df , aes(y=lat, x=long)) + 
   geom_raster( aes(group=Score, fill = Score) ) +
   coord_cartesian( xlim = c( left , right ), ylim =c( bottom , top ) ) +
-  ggtitle("GBM fold 2 - California points (raw values)") +
+  ggtitle("GBM fold 2 - native points (raw values)") +
   theme( panel.background = element_rect( fill = "lightblue",
                                           colour = "lightblue",
                                           size = 0.5, linetype = "solid")) +
@@ -135,7 +148,7 @@ GBM_fold3_raw <-
   ggplot(data = gbm_fold3_raw_df, aes(y=lat, x=long)) + 
   geom_raster( aes(group=Score, fill = Score) ) +
   coord_cartesian( xlim = c( left , right ), ylim =c( bottom , top ) ) +
-  ggtitle("GBM fold 3 - California points (raw values)") +
+  ggtitle("GBM fold 3 - native points (raw values)") +
   theme( panel.background = element_rect( fill = "lightblue",
                                           colour = "lightblue",
                                           size = 0.5, linetype = "solid")) +
@@ -150,7 +163,7 @@ GBM_fold4_raw <-
   ggplot(data = gbm_fold4_raw_df , aes(y=lat, x=long)) + 
   geom_raster( aes(group=Score, fill = Score) ) +
   coord_cartesian( xlim = c( left , right ), ylim =c( bottom , top ) ) +
-  ggtitle("GBM fold 4 - California points (raw values)") +
+  ggtitle("GBM fold 4 - native points (raw values)") +
   theme( panel.background = element_rect( fill = "lightblue",
                                           colour = "lightblue",
                                           size = 0.5, linetype = "solid")) +
@@ -165,7 +178,7 @@ GBM_fold5_raw <-
   ggplot(data = gbm_fold5_raw_df, aes(y=lat, x=long)) + 
   geom_raster( aes(group=Score, fill = Score) ) +
   coord_cartesian( xlim = c( left , right ), ylim =c( bottom , top ) ) +
-  ggtitle("GBM fold 5 - California points (raw values)") +
+  ggtitle("GBM fold 5 - native points (raw values)") +
   theme( panel.background = element_rect( fill = "lightblue",
                                           colour = "lightblue",
                                           size = 0.5, linetype = "solid")) +
@@ -183,13 +196,13 @@ GBM_fold1_binary <-
   ggplot(data = gbm_fold1_binary_df , aes(y=lat, x=long)) + 
   geom_raster( aes(group=Score, fill = Score) ) +
   coord_cartesian( xlim = c( left , right ), ylim =c( bottom , top ) ) +
-  ggtitle("GBM fold 1 - California points (binary values)") +
+  ggtitle("GBM fold 1 - native points (binary values)") +
   theme( panel.background = element_rect( fill = "lightblue",
                                           colour = "lightblue",
                                           size = 0.5, linetype = "solid")) +
   scale_fill_gradientn(name = "Suitability", colours = rev(terrain.colors(2)), na.value = "blue") + 
-  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA) + 
-  geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA) 
+  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA) #+ 
+#geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA) 
 
 # remove df
 rm( gbm_fold1_binary_df )
@@ -199,13 +212,13 @@ GBM_fold2_binary <-
   ggplot(data = gbm_fold2_binary_df , aes(y=lat, x=long)) + 
   geom_raster( aes(group=Score, fill = Score) ) +
   coord_cartesian( xlim = c( left , right ), ylim =c( bottom , top ) ) +
-  ggtitle("GBM fold 2 - California points (binary values)") +
+  ggtitle("GBM fold 2 - native points (binary values)") +
   theme( panel.background = element_rect( fill = "lightblue",
                                           colour = "lightblue",
                                           size = 0.5, linetype = "solid")) +
   scale_fill_gradientn(name = "Suitability", colours = rev(terrain.colors(2)), na.value = "blue") + 
-  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA) + 
-  geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
+  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA) #+ 
+#geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
 
 # remove df
 rm( gbm_fold2_binary_df )
@@ -215,13 +228,13 @@ GBM_fold3_binary <-
   ggplot(data = gbm_fold3_binary_df, aes(y=lat, x=long)) + 
   geom_raster( aes(group=Score, fill = Score) ) +
   coord_cartesian( xlim = c( left , right ), ylim =c( bottom , top ) ) +
-  ggtitle("GBM fold 3 - California points (binary values)") +
+  ggtitle("GBM fold 3 - native points (binary values)") +
   theme( panel.background = element_rect( fill = "lightblue",
                                           colour = "lightblue",
                                           size = 0.5, linetype = "solid")) +
   scale_fill_gradientn(name = "Suitability", colours = rev(terrain.colors(2)), na.value = "blue") + 
-  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA) + 
-  geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
+  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA) #+ 
+#geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
 
 # remove df
 rm( gbm_fold3_binary_df )
@@ -231,13 +244,13 @@ GBM_fold4_binary <-
   ggplot(data = gbm_fold4_binary_df , aes(y=lat, x=long)) + 
   geom_raster( aes(group=Score, fill = Score) ) +
   coord_cartesian( xlim = c( left , right ), ylim =c( bottom , top ) ) +
-  ggtitle("GBM fold 4 - California points (binary values)") +
+  ggtitle("GBM fold 4 - native points (binary values)") +
   theme( panel.background = element_rect( fill = "lightblue",
                                           colour = "lightblue",
                                           size = 0.5, linetype = "solid")) +
   scale_fill_gradientn(name = "Suitability", colours = rev(terrain.colors(2)), na.value = "blue") + 
-  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA) + 
-  geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
+  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA) #+ 
+#geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
 
 # remove df
 rm( gbm_fold4_binary_df )
@@ -247,13 +260,13 @@ GBM_fold5_binary <-
   ggplot(data = gbm_fold5_binary_df, aes(y=lat, x=long)) + 
   geom_raster( aes(group=Score, fill = Score) ) +
   coord_cartesian( xlim = c( left , right ), ylim =c( bottom , top ) ) +
-  ggtitle("GBM fold 5 - California points (binary values)") +
+  ggtitle("GBM fold 5 - native points (binary values)") +
   theme( panel.background = element_rect( fill = "lightblue",
                                           colour = "lightblue",
                                           size = 0.5, linetype = "solid")) +
   scale_fill_gradientn(name = "Suitability", colours = rev(terrain.colors(2)), na.value = "blue") + 
-  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA) + 
-  geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
+  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA) #+ 
+#geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
 
 # remove df
 rm( gbm_fold5_binary_df )
@@ -278,7 +291,6 @@ remove( GBM_fold1_raw , GBM_fold1_binary,
         GBM_fold4_raw , GBM_fold4_binary, 
         GBM_fold5_raw , GBM_fold5_binary )
 gc()
-
 
 # -------------------------------------------------------------------------------------------------------------------------------
 
@@ -315,13 +327,13 @@ GBM_mean_raw <-
   ggplot(data = gbm_mean_raw_df , aes(y=lat, x=long)) + 
   geom_raster( aes(group=Score, fill = Score) ) +
   coord_cartesian( xlim = c( left , right ), ylim =c( bottom , top ) ) +
-  ggtitle("GBM mean - California points (binary values)") +
+  ggtitle("GBM mean - native points (binary values)") +
   theme( panel.background = element_rect( fill = "lightblue",
                                           colour = "lightblue",
                                           size = 0.5, linetype = "solid")) +
   scale_fill_gradientn(name = "Suitability", colours = rev(terrain.colors(10)), na.value = "blue") + 
-  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA)+ 
-  geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
+  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA)#+ 
+#geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
 
 rm( gbm_mean_raw_df )
 gc()
@@ -330,46 +342,46 @@ GBM_mean_binary <-
   ggplot(data = gbm_mean_binary_df , aes(y=lat, x=long)) + 
   geom_raster( aes(group=Score, fill = Score) ) +
   coord_cartesian( xlim = c( left , right ), ylim =c( bottom , top ) ) +
-  ggtitle("GBM mean - California points (binary values)") +
+  ggtitle("GBM mean - native points (binary values)") +
   theme( panel.background = element_rect( fill = "lightblue",
                                           colour = "lightblue",
                                           size = 0.5, linetype = "solid")) +
   scale_fill_gradientn(name = "Suitability", colours = rev(terrain.colors(2)), na.value = "blue") + 
-  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA)+ 
-  geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
+  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA)#+ 
+#geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
 
 # remove df
 rm( gbm_mean_binary_df )
 gc()
 
-# Majority California 
+# Majority Native 
 GBM_mv <- 
   ggplot(data = gbm_mv_df , aes(y=lat, x=long)) + 
   geom_raster( aes(group=Score, fill = Score) ) +
   coord_cartesian( xlim = c( left , right ), ylim =c( bottom , top ) ) +
-  ggtitle("GBM majority vote - California points") +
+  ggtitle("GBM majority vote - native points") +
   theme( panel.background = element_rect( fill = "lightblue",
                                           colour = "lightblue",
                                           size = 0.5, linetype = "solid")) +
   scale_fill_gradientn(name = "Suitability", colours = rev(terrain.colors(2)), na.value = "blue") + 
-  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA) + 
-  geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
+  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA) #+ 
+#geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
 
 rm( gbm_mv_df )
 gc()
 
-# UD California 
+# UD Native 
 GBM_ud <- 
   ggplot(data = gbm_ud_df , aes(y=lat, x=long)) + 
   geom_raster( aes(fill = Score ) ) +
   coord_cartesian( xlim = c( left , right ), ylim =c( bottom , top ) ) +
-  ggtitle("GBM unanimous decision - California points") +
+  ggtitle("GBM unanimous decision - native points") +
   theme( panel.background = element_rect( fill = "lightblue",
                                           colour = "lightblue",
                                           size = 0.5, linetype = "solid")) +
   scale_fill_gradientn(name = "Suitability", colours = rev(terrain.colors(2)), na.value = "blue") + 
-  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA) + 
-  geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
+  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA) #+ 
+#geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
 
 rm( gbm_ud_df  )
 gc()

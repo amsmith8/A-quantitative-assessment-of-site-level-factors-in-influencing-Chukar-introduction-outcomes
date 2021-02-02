@@ -23,7 +23,7 @@ svm_tiffs <- list.files(path = "./Predictions/model_svm_folds", full.names= TRUE
 
 
 source("./R_script/Functions.R")
-
+source( "R_script/eBird_data_cleaning.R" )
 
 #compile tiffs to stacks  
 model_stack_svm <- listToStack(svm_tiffs)
@@ -33,13 +33,16 @@ model_stack_rf <- listToStack(rf_tiffs)
 model_stack_ann <- listToStack(ann_tiffs)
 
 #Chukar range polygon file 
-Ac_poly <- rgdal::readOGR("/Users/austinsmith/Documents/SDM_spatial_data/Bird_life_galliformes_fgip/Alectoris_chukar/Alectoris_chukar.shp") # via Bird Life
-crs(Ac_poly) <- crs(model_stack_rf$rfFold1)
-
+#Ac_poly <- rgdal::readOGR("/Users/austinsmith/Documents/SDM_spatial_data/Bird_life_galliformes_fgip/Alectoris_chukar/Alectoris_chukar.shp") # via Bird Life
+#crs(Ac_poly) <- crs(model_stack_rf$rfFold1)
 
 ### Seperate the polygon into native and naturalized regions
-Native <- subset(Ac_poly, Ac_poly$OBJECTID == 36 )  # historical  native range for A. chukar. Similar to Christensen 1970
-Naturalized <- subset(Ac_poly, Ac_poly$OBJECTID != 36 ) # recognized regions of naturalized populations
+#Native <- subset(Ac_poly, Ac_poly$OBJECTID == 36 )  # historical  native range for A. chukar. Similar to Christensen 1970
+#Naturalized <- subset(Ac_poly, Ac_poly$OBJECTID != 36 ) # recognized regions of naturalized populations
+
+
+naturalized <- circles(us_pts, d = d , dissolve=TRUE, lonlat=TRUE) #49km is the average distance recorded in Bohl 1957
+naturalized  <- polygons(naturalized )
 
 
 # limit to contiguous US states
@@ -48,7 +51,7 @@ crs(states) <- crs(model_stack_rf$rfFold1)
 
 contiguous_us <- states[states$name != "Alaska",]  # remove Alaska
 contiguous_us  <- contiguous_us [contiguous_us $name != "Hawaii",] # remove Hawaii
-plot(contiguous_us)
+#plot(contiguous_us)
 
 
 # Plot colors  
@@ -59,23 +62,31 @@ plot(contiguous_us)
 # Step 3 : Accuracy - function,s images, plots
 ####### ######## ######## ####### ######## ########
 
+# MESS Model if wanting to compare novel locations - not needed for analysis 01/17/20
+# us_mess <- raster( "Predictions/mess_us.tif"   ) 
+# us_mess <- crop(us_mess, naturalized )
+# us_mess <- mask(us_mess, naturalized)
+# us_mess <- us_mess >0
+# plot(us_mess)
+
+#Ac_raster <-mosaic(us_mess , absent_space, fun = sum) # used if wanting to replace other model 
+#plot(Ac_raster)
 
 # Create raster of chukar range model 
-
 absent_space <- model_stack_rf$rfFold1 # can be any raster - just need it to convert background space to 0
 absent_space [absent_space  < 1] <- 0
 #plot(absent_space)
 
 # create raster with chukar range = 1, absent = 0
-Ac_raster <-rasterize(Ac_poly, absent_space, field=1) 
+Ac_raster <-rasterize(naturalized , absent_space, field=1)
 #plot(Ac_raster)
 
 true_value_chukar <- merge( Ac_raster, absent_space )
 #plot(true_value_chukar)
 
 contiguous_us_chukar <- crop(true_value_chukar, contiguous_us )
-#plot(contiguous_us_chukar)
-
+#plot(contiguous_us_chukar, main = "Chukar range")
+#plot(contiguous_us, add = T)
 
 
 
@@ -234,8 +245,8 @@ plot1 <- ggbarplot(final_table, x = "variable", y = "value", ,position = positio
 plot1 +   theme(plot.title = element_text(hjust = 0.5) ) + facet_grid(~Stage, space = "free_x", scales = "free_x")
 
 
-#saveRDS( all_cm_results , "./RDS_objects/Native/all_cm_results.rds" )
-#saveRDS( statistics_summary , "./RDS_objects/Native/statistics_summary.rds" )
+saveRDS( all_cm_results , "./RDS_objects/Native/all_cm_results.rds" )
+saveRDS( statistics_summary , "./RDS_objects/Native/statistics_summary.rds" )
 
 
 
@@ -383,9 +394,9 @@ complete_uv_cm <- rbind( cm_raster( crop( complete_sum >= 13 , contiguous_us_chu
 )
 row.names(complete_uv_cm) <- c( "n >= 13", "n = 25" )
 
-plot( crop( complete_sum == 25 , contiguous_us_chukar ) )
+plot( crop( complete_sum  >= 13 , contiguous_us_chukar ) )
 plot(states, add = T)
 
-#saveRDS( alg_ensembles, "./RDS_objects/Native/alg_ensembles.rds" )
-#saveRDS( all_ensembles_gglist , "./RDS_objects/Native/all_ensembles_gglist.rds" )
-#saveRDS( complete_uv_cm  , "./RDS_objects/Native/complete_uv_cm.rds" )
+saveRDS( alg_ensembles, "./RDS_objects/Native/alg_ensembles.rds" )
+saveRDS( all_ensembles_gglist , "./RDS_objects/Native/all_ensembles_gglist.rds" )
+saveRDS( complete_uv_cm  , "./RDS_objects/Native/complete_uv_cm.rds" )

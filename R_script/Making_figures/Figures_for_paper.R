@@ -1,3 +1,7 @@
+# Script for making Fig 1-3. 
+# Due to limited computer memory, Figures may need to be created one at a time.  
+
+library("dismo")
 library("ggplot2")
 library("ggpubr")
 library("maptools")
@@ -5,7 +9,7 @@ library("raster")
 library("RColorBrewer")
 
 
-
+source( "R_script/eBird_data_cleaning.R" )
 
 
 # http://en.wikipedia.org/wiki/Extreme_points_of_the_United_States#Westernmost
@@ -15,22 +19,30 @@ right = -66.9513812 # east long
 bottom =  24.7433195 # south lat
 
 states <- rgdal::readOGR("/Users/austinsmith/Downloads/ne_110m_admin_1_states_provinces/ne_110m_admin_1_states_provinces.shp") 
-crs(states) <- crs(model_stack_rf$rfFold1)
+crs(states) <- crs(model_stack_rf$rfFold1) # refer to script for Fig-2 below
 
-Ac_poly <- rgdal::readOGR("/Users/austinsmith/Documents/SDM_spatial_data/Bird_life_galliformes_fgip/Alectoris_chukar/Alectoris_chukar.shp") # via Bird Life
-crs(Ac_poly) <- crs(model_stack_rf$rfFold1)
-#r <- rasterize(Ac.poly, Final.model, field=1)
+contiguous_us <- states[states$name != "Alaska",]  # remove Alaska
+contiguous_us  <- contiguous_us [contiguous_us $name != "Hawaii",]
 
 
-### Seperate the polygon into native and naturalized regions
-native <- subset(Ac_poly, Ac_poly$OBJECTID == 36 )  # historical  native range for A. chukar. Similar to Christensen 1970
-naturalized <- subset(Ac_poly, Ac_poly$OBJECTID != 36 )
+# Ac_poly <- rgdal::readOGR("/Users/austinsmith/Documents/SDM_spatial_data/Bird_life_galliformes_fgip/Alectoris_chukar/Alectoris_chukar.shp") # via Bird Life
+# crs(Ac_poly) <- crs(model_stack_rf$rfFold1)
+# #r <- rasterize(Ac.poly, Final.model, field=1)
+# 
+# 
+# ### Seperate the polygon into native and naturalized regions
+# native <- subset(Ac_poly, Ac_poly$OBJECTID == 36 )  # historical  native range for A. chukar. Similar to Christensen 1970
+# naturalized <- subset(Ac_poly, Ac_poly$OBJECTID != 36 )
+# 
+# fort_native <- fortify(native)
+# fort_nat <- fortify(naturalized)
 
-fort_native <- fortify(native)
+native <- circles(native_pts[1:2], d = d , dissolve=TRUE, lonlat=TRUE)
+
+naturalized <- circles(us_pts, d = d , dissolve=TRUE, lonlat=TRUE) #49km is the average distance recorded in Bohl 1957
+naturalized  <- polygons(naturalized )
+
 fort_nat <- fortify(naturalized)
-
-
-
 
 
 library( "rnaturalearth" )
@@ -44,6 +56,51 @@ world_land <- world_land - antarctica - greenland
 #crs( world_land ) <- Model_CRS
 wl <-fortify(world_land )
 
+ 
+
+
+All_pts <- ggplot() +
+  theme( panel.background = element_rect( fill = "lightblue",
+                                                     colour = "lightblue",
+                                                     size = 0.5, linetype = "solid")) +
+  geom_polygon(aes(x = long, y = lat, group=group), data = wl, colour="black", fill="white") +
+  geom_point(aes(x = lon, y = lat, color = "darkorange"), data = native_pts) +
+  geom_point(aes(x = lon, y = lat, color = "blue"), data = naturalized_pts) +
+  scale_color_identity(name = "Global Distribution ",
+                       breaks = c( "darkorange","blue"),
+                       labels = c( "Native", "Naturalized"),
+                       guide = "legend") +
+  theme(legend.position = c(0.15, 0.2),
+        legend.background = element_rect(fill = "white", color = "black"))
+All_pts 
+
+
+US_pts <- ggplot() +
+  theme( panel.background = element_rect( fill = "lightblue",
+                                          colour = "lightblue",
+                                          size = 0.5, linetype = "solid")) +
+  geom_polygon(aes(x = long, y = lat, group=group), data = contiguous_us, colour="black", fill="white") +
+  geom_polygon(aes(x = long, y = lat, group=group), data = naturalized, colour="black", fill="blue") +
+  #geom_point(aes(x = lon, y = lat, color = "blue"), data = us_pts) +
+  geom_point(aes(x = lon, y = lat, color = "darkorange"), data = CA_pts) +
+  scale_color_identity(name = "US Chukar Range",
+                       breaks = c( "darkorange"),
+                       labels = c( "CA occurrences"),
+                       guide = "legend") +
+  theme(legend.position = c(0.15, 0.2),
+        legend.background = element_rect(fill = "white", color = "black"))
+US_pts 
+
+
+ggarrange( All_pts , US_pts ,
+           labels = c("A", "B"),
+           ncol = 1, nrow = 2 )
+
+
+
+
+
+
 # ggplot() +   
 #   theme( panel.background = element_rect( fill = "lightblue",
 #                                                      colour = "lightblue",
@@ -51,35 +108,35 @@ wl <-fortify(world_land )
 #   geom_polygon(aes(x = long, y = lat, group=group), data = fort_native, colour="black", fill="white") +
 #   geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="black", fill="blue") +
 #   geom_polygon(aes(x = long, y = lat, group=group), data = wl, colour="black", fill="red") 
-
-par(mfrow = c(1,1))
-layout(matrix(c(1,1,2,3), 2, 2, byrow = TRUE))
-plot(world_land, main = "Chukar world distribution")
-plot(native, add = TRUE , col = "blue")
-plot(naturalized, add = TRUE, col = "red")
-legend("bottom", legend=c("Native ", "Naturalized"),bty = "n", # turn off legend border
-       col=c( "blue", "red"), pch = 15, cex=0.8)
-
-
-kmeans <- readRDS("/Users/austinsmith/Documents/GitHub/A-quantitative-assessment-of-site-level-factors-in-influencing-Chukar-introduction-outcomes./RDS_objects/Native/k_means_clusters.rds")
-chukar_present_pts <- readRDS("/Users/austinsmith/Documents/GitHub/A-quantitative-assessment-of-site-level-factors-in-influencing-Chukar-introduction-outcomes./RDS_objects/Native/chukar_present_pts.rds")
-
-occ_grp <- kmeans$cluster
-
-plot(native, col ="gray", main = "Native range spatial bins" )
-points(chukar_present_pts[,1:2], pch=21, bg=occ_grp)
-plot(world_land, add = T)
-#legend("bottom", inset=.02, box.col="white",
-#       c("Fold 4","Fold 6","Fold 8","Fold 8","Fold 8"), fill=occ_grp, horiz=TRUE, cex=0.8)
-
-CA <- states[states$name == "California",]
-CA_chukar_area <- intersect(CA, Ac_poly)
-
-plot( states, xlim = c( left, right ), ylim =c( bottom , top ), main = " US naturalized range" )
-plot(naturalized, add = TRUE, col = "lightblue1")
-plot(CA_chukar_area, add = TRUE, col = "red")
-legend("bottom", legend=c("CA subspecies range"), bty = "n", # turn off legend border
-       col=c( "red"), pch = 15, cex=0.8)
+#
+# par(mfrow = c(1,1))
+# layout(matrix(c(1,1,2,3), 2, 2, byrow = TRUE))
+# plot(world_land, main = "Chukar world distribution")
+# plot(native, add = TRUE , col = "blue")
+# plot(naturalized, add = TRUE, col = "red")
+# legend("bottom", legend=c("Native ", "Naturalized"),bty = "n", # turn off legend border
+#        col=c( "blue", "red"), pch = 15, cex=0.8)
+# 
+# 
+# kmeans <- readRDS("/Users/austinsmith/Documents/GitHub/A-quantitative-assessment-of-site-level-factors-in-influencing-Chukar-introduction-outcomes./RDS_objects/Native/k_means_clusters.rds")
+# chukar_present_pts <- readRDS("/Users/austinsmith/Documents/GitHub/A-quantitative-assessment-of-site-level-factors-in-influencing-Chukar-introduction-outcomes./RDS_objects/Native/chukar_present_pts.rds")
+# 
+# occ_grp <- kmeans$cluster
+# 
+# plot(native, col ="gray", main = "Native range spatial bins" )
+# points(chukar_present_pts[,1:2], pch=21, bg=occ_grp)
+# plot(world_land, add = T)
+# #legend("bottom", inset=.02, box.col="white",
+# #       c("Fold 4","Fold 6","Fold 8","Fold 8","Fold 8"), fill=occ_grp, horiz=TRUE, cex=0.8)
+# 
+# CA <- states[states$name == "California",]
+# CA_chukar_area <- intersect(CA, Ac_poly)
+# 
+# plot( states, xlim = c( left, right ), ylim =c( bottom , top ), main = " US naturalized range" )
+# plot(naturalized, add = TRUE, col = "lightblue1")
+# plot(CA_chukar_area, add = TRUE, col = "red")
+# legend("bottom", legend=c("CA subspecies range"), bty = "n", # turn off legend border
+#        col=c( "red"), pch = 15, cex=0.8)
 
 
 
@@ -160,7 +217,7 @@ B <- plot2 +  font("legend.title",  face = "bold")
 B <- B +   theme(plot.title = element_text(hjust = 0.5) ) + facet_grid(~Stage, space = "free_x", scales = "free_x")
 B
 
-GG <- ggarrange(A+ rremove("legend"), B, 
+GG <- ggarrange(A, B, 
           labels = c("A", "B"),
           ncol = 1, nrow = 2)
 GG 
@@ -219,7 +276,8 @@ model_stack_maxent_CA <- listToStack(maxent_tiffs_CA)
 model_stack_rf_CA <- listToStack(rf_tiffs_CA)
 model_stack_svm_CA <- listToStack(svm_tiffs_CA)
 
-
+# eBird data for range polygon
+source( "R_script/eBird_data_cleaning.R" )
 
 
 # http://en.wikipedia.org/wiki/Extreme_points_of_the_United_States#Westernmost
@@ -231,17 +289,21 @@ bottom =  24.7433195 # south lat
 states <- rgdal::readOGR("/Users/austinsmith/Downloads/ne_110m_admin_1_states_provinces/ne_110m_admin_1_states_provinces.shp") 
 crs(states) <- crs(model_stack_rf$rfFold1)
 
-Ac_poly <- rgdal::readOGR("/Users/austinsmith/Documents/SDM_spatial_data/Bird_life_galliformes_fgip/Alectoris_chukar/Alectoris_chukar.shp") # via Bird Life
-crs(Ac_poly) <- crs(model_stack_rf$rfFold1)
-#r <- rasterize(Ac.poly, Final.model, field=1)
+# Ac_poly <- rgdal::readOGR("/Users/austinsmith/Documents/SDM_spatial_data/Bird_life_galliformes_fgip/Alectoris_chukar/Alectoris_chukar.shp") # via Bird Life
+# crs(Ac_poly) <- crs(model_stack_rf$rfFold1)
+# #r <- rasterize(Ac.poly, Final.model, field=1)
+# 
+# 
+# ### Seperate the polygon into native and naturalized regions
+# native <- subset(Ac_poly, Ac_poly$OBJECTID == 36 )  # historical  native range for A. chukar. Similar to Christensen 1970
+# naturalized <- subset(Ac_poly, Ac_poly$OBJECTID != 36 )
+# 
+# fort_nat <- fortify(naturalized)
 
-
-### Seperate the polygon into native and naturalized regions
-native <- subset(Ac_poly, Ac_poly$OBJECTID == 36 )  # historical  native range for A. chukar. Similar to Christensen 1970
-naturalized <- subset(Ac_poly, Ac_poly$OBJECTID != 36 )
+naturalized <- circles(us_pts, d = d , dissolve=TRUE, lonlat=TRUE) #49km is the average distance recorded in Bohl 1957
+naturalized  <- polygons(naturalized )
 
 fort_nat <- fortify(naturalized)
-
 
 
 # Native
@@ -318,8 +380,8 @@ majority_votes_native <-
                                         colour = "lightblue",
                                         size = 0.5, linetype = "solid")) +
   scale_fill_gradientn(name = "Suitability", colours = rev(terrain.colors(2)), na.value = "blue") + 
-  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA) + 
-  geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
+  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA) #+ 
+#geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
 
  
 
@@ -333,8 +395,8 @@ ud_votes_native <-
                                           colour = "lightblue",
                                           size = 0.5, linetype = "solid")) +
   scale_fill_gradientn(name = "Suitability", colours = rev(terrain.colors(2)), na.value = "blue") + 
-  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA) + 
-  geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
+  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA) #+ 
+#geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
 
 
 
@@ -412,8 +474,8 @@ majority_votes_CA <-
                                           colour = "lightblue",
                                           size = 0.5, linetype = "solid")) +
   scale_fill_gradientn(name = "Suitability", colours = rev(terrain.colors(2)), na.value = "blue") + 
-  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA) + 
-  geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
+  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA) #+ 
+#geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
 
 
 
@@ -428,8 +490,8 @@ ud_votes_CA  <-
                                           colour = "lightblue",
                                           size = 0.5, linetype = "solid")) +
   scale_fill_gradientn(name = "Suitability", colours = rev(terrain.colors(2)), na.value = "blue") + 
-  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA) + 
-  geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
+  geom_polygon(aes(x = long, y = lat, group=id), data = states, colour="black", fill=NA) #+ 
+  #geom_polygon(aes(x = long, y = lat, group=group), data = fort_nat, colour="red", fill=NA)
 
 
 

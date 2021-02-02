@@ -1,16 +1,12 @@
-## Chukar modeling - site level factors 
-## Author: Austin M. Smith
-
-
 # SET-UP ENVIRONMENT
 
 
 #rm(list=ls(all=TRUE))
 
-source( "R_script/Global-covariate-prep.R" )
-Model_CRS <- crs( super_stack )
+source( "R_script/Global_covariate_prep.R" )
+source( "R_script/eBird_data_cleaning.R" )
 
-
+library("dismo")
 library( "maptools" )
 library( "rgdal" )
 library( "rgeos" )
@@ -18,23 +14,18 @@ library( "sp" )
 library( "tictoc" )
 
 
-
 # remove unnecessary objects 
-rm(bioclim_list,bioclim_stack,topo_list,topo_stack)
+rm( bioclim_list , bioclim_stack , topo_list , topo_stack ,
+    bohl , CA_pts , dups , ebird )
 
+# set project CRS
+Model_CRS <- crs( super_stack )
 
-# DATA PREPROCESS
+native <- circles(native_pts, d = d , dissolve=TRUE, lonlat=TRUE) #60km is the average distance recorded 
+native <- polygons(native)
 
-
-
-#Chukar range polygon file 
-Ac_poly <- readShapePoly( "/Users/austinsmith/Documents/SDM_spatial_data/Bird_life_galliformes_fgip/Alectoris_chukar/Alectoris_chukar.shp" ) # via Bird Life
-crs( Ac_poly ) <- Model_CRS
-
-### Seperate the polygon into native and naturalized regions
-native <- subset( Ac_poly , Ac_poly$OBJECTID == 36 )  # historical  native range for A. chukar. Similar to Christensen 1970
-naturalized <- subset( Ac_poly, Ac_poly$OBJECTID != 36 ) # recognized regions of naturalized populations
-
+#naturalized <- circles(us_pts, d = d , dissolve=TRUE, lonlat=TRUE) #60km is the average distance recorded 
+#naturalized  <- polygons(naturalized )
 
 library( "rnaturalearth" )
 world_land <- ne_countries( returnclass = c( "sp", "sf" ) )
@@ -47,31 +38,21 @@ world_land <- world_land - antarctica - greenland
 crs( world_land ) <- Model_CRS
 
 
-#### Calculations to determine how many points
-#sum( area( Ac_poly ) ) / sum( area( world_land ) ) # determine ratio of background.pts : Native.pts
-
-
-
-# COMPUTE COVARIATES
-
-
-
 set.seed( 5421 )
 
 # Present points
-chukar_present <- spsample( native, 1000 , type = 'random' )
-chukar_present_coords <- data.frame( chukar_present@coords ) # data frame of lon lat coords 
-names(chukar_present_coords) <- c( "lon", "lat" )
+chukar_present <- native_pts
 
+# number of cv folds 
 k <- 5
-k_means <- kmeans( chukar_present_coords , k)
-occ_grp <- k_means$cluster
+k_folds <- kfold( native_pts , k)
 
-chukar_present_covariates <- extract( super_stack, chukar_present_coords ) # extract values from raster stack 
-chukar_present <- cbind( chukar_present_coords, chukar_present_covariates ) # combine coords and covars into one df 
+
+chukar_present_covariates <- extract( super_stack , native_pts ) # extract values from raster stack 
+chukar_present <- cbind( native_pts , chukar_present_covariates ) # combine coords and covars into one df 
 
 # Background points
-background_pts <- spsample( world_land , 11000, type = 'random' )
+background_pts <- spsample( world_land , 10000, type = 'random' )
 background_coords <- data.frame( background_pts@coords )
 names(background_coords) <- c("lon", "lat")
 
@@ -87,21 +68,18 @@ sdm_data <- data.frame( cbind( sdm_data , pts_id ) )
 sdm_data <- na.omit(sdm_data) # remove N/A's
 
 
-
 # The points used for model building
-saveRDS(chukar_present, "./RDS_objects/chukar_present_pts.rds")
-saveRDS(background_sample, "./RDS_objects/background_sample.rds"  )
-saveRDS(sdm_data, "./RDS_objects/chukar_sdm_data.rds"  )
-saveRDS(k, "./RDS_objects/k.rds"  )
-saveRDS(k_means, "./RDS_objects/k_means_clusters.rds")
-saveRDS(occ_grp,"./RDS_objects/occ_grp.rds")
 
-
-
+dir.create( "RDS_objects")
+dir.create( "RDS_objects/Native")
+saveRDS(chukar_present, "./RDS_objects/Native/chukar_present_pts.rds")
+saveRDS(background_sample, "./RDS_objects/Native/background_sample.rds"  )
+saveRDS(sdm_data, "./RDS_objects/Native/chukar_sdm_data.rds"  )
+saveRDS(k, "./RDS_objects/Native/k.rds"  )
+saveRDS(k_folds, "./RDS_objects/Native/k_folds.rds")
 
 
 # CREATE DATA STORAGE
-
 
 
 # Create data.frame to hold AUC scores 
@@ -121,9 +99,7 @@ model_stack_maxent <- stack()
 model_stack_rf <- stack()
 model_stack_svm <- stack()
 
-
 # RUN ALGORITHMS
-
 
 
 # Problem with files on computer.  this uploads rJava for the session on current computer 
@@ -143,8 +119,8 @@ library("randomForest")
 # Model loop
 for (i in 1:k) {
   
-  train <- sdm_data[ occ_grp != i, ] # all folds excluding the i-th 
-  test <- sdm_data[ occ_grp == i, ] # only the i-th
+  train <- sdm_data[ k_folds != i, ] # all folds excluding the i-th 
+  test <- sdm_data[ k_folds == i, ] # only the i-th
   
   
   # ANN
@@ -172,8 +148,8 @@ for (i in 1:k) {
   pred_gbm <- predict( super_stack, gbm , n.trees = 100 )
   model_stack_gbm <- stack( model_stack_gbm, pred_gbm ) # add rasters
   toc()
-
-
+  
+  
   # MaxEnt
   ######## ######## #######
   tic("maxent")
@@ -189,8 +165,8 @@ for (i in 1:k) {
   pred_maxent<- predict( super_stack , maxent )
   model_stack_maxent <- stack( model_stack_maxent , pred_maxent ) # add rasters
   toc()
-
-
+  
+  
   # RF
   ######## ######## #######
   tic("rf")
@@ -202,7 +178,7 @@ for (i in 1:k) {
   pred_rf <- predict( super_stack , rf )
   model_stack_rf <- stack( model_stack_rf , pred_rf ) # add rasters
   toc()
-
+  
   # SVM
   ######## ######## #######
   tic("svm")
@@ -215,8 +191,10 @@ for (i in 1:k) {
   model_stack_svm <- stack(model_stack_svm, pred_svm) # add rasters
   toc()
   
- gc() 
+  gc() 
 }
+
+###-----------------------------------------------------------------------------------------------------------------------
 
 ###-----------------------------------------------------------------------------------------------------------------------
 
@@ -224,20 +202,11 @@ for (i in 1:k) {
 ###################################################
 ### code chunk number 7: save-output
 ###################################################
-saveRDS( auc_scores , "./RDS_objects/auc_scores.rds" )
-saveRDS( sensSpec_scores , "./RDS_objects/sensSpec_scores.rds" )
+saveRDS( auc_scores , "./RDS_objects/Native/auc_scores.rds" )
+saveRDS( sensSpec_scores , "./RDS_objects/Native/sensSpec_scores.rds" )
 
 
 ###-----------------------------------------------------------------------------------------------------------------------
-
-# Important objects
-
-# # The points used for model building
-# saveRDS(chukar_present, "./RDS_objects/chukar_present_pts.rds")
-# saveRDS(background_sample, "./RDS_objects/background_sample.rds"  )
-# saveRDS(sdm_data, "./RDS_objects/chukar_sdm_data.rds"  )
-# saveRDS(k_means, "./RDS_objects/k_means_clusters.rds")
-# saveRDS(occ_grp,"./RDS_objects/occ_grp.rds")
 
 
 names( model_stack_ann ) <- c("annFold1", "annFold2", "annFold3", "annFold4", "annFold5")
@@ -259,5 +228,4 @@ writeRaster(model_stack_gbm, filename=file.path("Predictions/model_gbm_folds",na
 writeRaster(model_stack_maxent, filename=file.path("Predictions/model_maxent_folds",names(model_stack_maxent)), bylayer=TRUE,format="GTiff")
 writeRaster(model_stack_rf, filename=file.path("Predictions/model_rf_folds",names(model_stack_rf)), bylayer=TRUE,format="GTiff")
 writeRaster(model_stack_svm, filename=file.path("Predictions/model_svm_folds",names(model_stack_svm)), bylayer=TRUE,format="GTiff")
-
 
